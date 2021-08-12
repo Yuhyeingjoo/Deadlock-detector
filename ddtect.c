@@ -174,34 +174,37 @@ void reset_or_not(char * exename){
 	}
 }
 
-void read_message(int* protocol, long* recv_pid, long* recv_m, int* trace_size, char* trace_str  ){
-		read_size = sizeof(int);
-		for(int i=0; i<read_size;){
-			i+=read(fd,((char*)&protocol)+i,read_size-i);
-		}
-		read_size = sizeof(long);
-		for(int i=0; i<read_size;){
-			i+=read(fd, ((char*)&recv_pid)+i, read_size -i);
-		}
-		read_size = sizeof(long);
-		for(int i=0; i<read_size;){
-			i+=read(fd,((char*) &recv_m)+i, read_size -i);
-		}
-		read_size = sizeof(int);
-		for(int i=0; i<read_size;)
-			i+=read(fd, ((char*)&trace_size)+i,read_size-i);
-		for(int i=0; i<trace_size;)
-			i+= read(fd, trace_str+i, trace_size-i);
+void read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* addr_str  ){
+	int read_size, addr;	
+	read_size = sizeof(int);
+	for(int i=0; i<read_size;){
+		i+=read(fd,((char*)protocol)+i,read_size-i);
+	}
+	read_size = sizeof(long);
+	for(int i=0; i<read_size;){
+		i+=read(fd, ((char*)recv_pid)+i, read_size -i);
+	}
+	read_size = sizeof(long);
+	for(int i=0; i<read_size;){
+		i+=read(fd,((char*) recv_m)+i, read_size -i);
+	}
+	read_size = sizeof(int);
+	for(int i=0; i<read_size;)
+		i+=read(fd, ((char*)&addr)+i,read_size-i);
+
+	sprintf(addr_str,"%X", addr);
 }
 
-int main(){
+int main( int argc, char* argv[]){
 	long recv_m, recv_pid;
-	int protocol, read_size= 0, fd, trace_size;
-	char *exename = 0x0, trace_str[64], *addr_str;
+	int protocol, read_size= 0, fd, trace_size, addr;
+	char *exename = (char*)malloc(32), trace_str[64], *addr_str =(char*)malloc(32) ;
+	exename = 0x0;
 	pthread_mutex_t *m;
 	fd = open("channel", O_RDONLY | O_SYNC) ;
 	while(1){
-		
+		read_message(fd, &protocol, &recv_pid, &recv_m, addr_str);
+		/*		
 		read_size = sizeof(int);
 		for(int i=0; i<read_size;){
 			i+=read(fd,((char*)&protocol)+i,read_size-i);
@@ -216,20 +219,20 @@ int main(){
 		}
 		read_size = sizeof(int);
 		for(int i=0; i<read_size;)
-			i+=read(fd, ((char*)&trace_size)+i,read_size-i);
-		for(int i=0; i<trace_size;)
-			i+= read(fd, trace_str+i, trace_size-i);
-//		printf("\n\nReceive\n%d %ld %ld \n ",protocol, recv_pid, recv_m);
+			i+=read(fd, ((char*)&addr)+i,read_size-i);
+		
+		sprintf(addr_str,"%X", addr);
+
+*/		
+		printf("\n\nReceive\n%d %ld %ld %s\n ",protocol, recv_pid, recv_m, argv[1]);
+
 		if(protocol ==1){
 			
-			exename = strtok(trace_str,"(");
-			addr_str = strtok(NULL, "");
-			reset_or_not(exename);
-//			printf("Exe %s  addr %s\n", exename, addr_str);
+//			printf("Exe %s  addr %s\n", argv[1], addr_str);
 			graph_make(recv_pid, recv_m);
 			check();
 			mucheck();
-			deadlock_exception(exename, addr_str );
+			deadlock_exception(argv[1], addr_str );
 			printf("\n");
 		}
 		else{

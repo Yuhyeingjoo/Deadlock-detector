@@ -15,7 +15,7 @@
 
 int pthread_mutex_lock(pthread_mutex_t *mutex ){
 	int fd, protocol=1, size;
-	int line_n, str_size;
+	int line_n, str_size, addr ;
 	void *buf[100];
 	char **line;
         int (*mutex_p)(pthread_mutex_t *m);
@@ -27,7 +27,9 @@ int pthread_mutex_lock(pthread_mutex_t *mutex ){
 		exit(EXIT_FAILURE);
 	}
 
-	char *ptr = strtok(line[1], ")");
+	char *ptr = strtok(line[1], "(");
+	ptr = strtok(NULL, ")");
+	addr = (int)strtol(ptr,NULL,16);
 	str_size = strlen(ptr);
 	if (mkfifo("channel", 0666)) {
 		if (errno != EEXIST) {
@@ -60,9 +62,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex ){
 	size = sizeof(int);
 	
 	for(int i=0; i<4;)
-		i+= write(fd, ((char*)&str_size)+i, size-i);
-	for(int i=0; i<str_size; )
-		i+= write(fd, ptr+i, str_size-i);
+		i+= write(fd, ((char*)&addr)+i, size-i);
+	
 	
 	flock(fd, LOCK_UN);
 	close(fd) ;
