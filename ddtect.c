@@ -53,23 +53,23 @@ struct thread* is_in_plist(long given_id){
 }
 
 void graph_make(long given_id, long given_m){
-	struct thread* tmp1;
-	struct node* tmp2;
-	if((tmp1 =is_in_plist(given_id)) == 0x0){
-		tmp1 = new_thread(given_m, given_id);
-		plist[plist_n++] = tmp1;
+	struct thread* thr_tmp1;
+	struct node* mut_tmp2;
+	if((thr_tmp1 =is_in_plist(given_id)) == 0x0){
+		thr_tmp1 = new_thread(given_m, given_id);
+		plist[plist_n++] = thr_tmp1;
 	}
-	if((tmp2 = is_in_mlist(given_m))==0x0){
-		tmp2 = new_node(given_m);
-		mlist[mlist_n++] = tmp2;
+	if((mut_tmp2 = is_in_mlist(given_m))==0x0){
+		mut_tmp2 = new_node(given_m);
+		mlist[mlist_n++] = mut_tmp2;
 	}
-	tmp1->list[tmp1->list_n] = tmp2;
-	if(tmp1->list_n>0 && tmp1->list[tmp1->list_n-1]!=0x0){
-		int from = tmp1->list_n-1;
-		int to = tmp1->list_n;
-		tmp1->list[from]->next = tmp1->list[to];
+	thr_tmp1->list[thr_tmp1->list_n] = mut_tmp2;
+	if(thr_tmp1->list_n>0 && thr_tmp1->list[thr_tmp1->list_n-1]!=0x0){
+		int from = thr_tmp1->list_n-1;
+		int to = thr_tmp1->list_n;
+		thr_tmp1->list[from]->next = thr_tmp1->list[to];
 	} 
-	tmp1->list_n++;
+	thr_tmp1->list_n++;
 }
 void unlock_graph(long given_id, long given_m){
 	struct thread* ttmp = is_in_plist(given_id);
@@ -159,7 +159,7 @@ void reset(){
 }
 void reset_or_not(char * exename){
 	if(exefile_name ==0x0){
-		exefile_name = (char*)malloc(64);
+		exefile_name = (char*)malloc(sizeof(char)*64);
 		strcpy(exefile_name , exename);
 
 		printf("-----------------%s start------------\n",exefile_name);
@@ -198,7 +198,7 @@ void read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* add
 int main( int argc, char* argv[]){
 	long recv_m, recv_pid;
 	int protocol, read_size= 0, fd, addr;
-	char *exename = (char*)malloc(32), trace_str[64], *addr_str =(char*)malloc(32) ;
+	char *exename = (char*)malloc(sizeof(char)*32), trace_str[64], *addr_str =(char*)malloc(sizeof(char)*32) ;
 	strcpy(exename,argv[1]);
 	fd = open("channel", O_RDONLY | O_SYNC) ;
 	while(1){
