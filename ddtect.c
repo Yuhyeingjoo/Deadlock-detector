@@ -197,42 +197,19 @@ void read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* add
 
 int main( int argc, char* argv[]){
 	long recv_m, recv_pid;
-	int protocol, read_size= 0, fd, trace_size, addr;
+	int protocol, read_size= 0, fd, addr;
 	char *exename = (char*)malloc(32), trace_str[64], *addr_str =(char*)malloc(32) ;
-	exename = 0x0;
-	pthread_mutex_t *m;
+	strcpy(exename,argv[1]);
 	fd = open("channel", O_RDONLY | O_SYNC) ;
 	while(1){
 		read_message(fd, &protocol, &recv_pid, &recv_m, addr_str);
-		/*		
-		read_size = sizeof(int);
-		for(int i=0; i<read_size;){
-			i+=read(fd,((char*)&protocol)+i,read_size-i);
-		}
-		read_size = sizeof(long);
-		for(int i=0; i<read_size;){
-			i+=read(fd, ((char*)&recv_pid)+i, read_size -i);
-		}
-		read_size = sizeof(long);
-		for(int i=0; i<read_size;){
-			i+=read(fd,((char*) &recv_m)+i, read_size -i);
-		}
-		read_size = sizeof(int);
-		for(int i=0; i<read_size;)
-			i+=read(fd, ((char*)&addr)+i,read_size-i);
-		
-		sprintf(addr_str,"%X", addr);
-
-*/		
 		printf("\n\nReceive\n%d %ld %ld %s\n ",protocol, recv_pid, recv_m, argv[1]);
-
 		if(protocol ==1){
-			
 //			printf("Exe %s  addr %s\n", argv[1], addr_str);
 			graph_make(recv_pid, recv_m);
 			check();
 			mucheck();
-			deadlock_exception(argv[1], addr_str );
+			deadlock_exception(exename, addr_str );
 			printf("\n");
 		}
 		else{
