@@ -31,10 +31,6 @@ static int plist_n =0;
 static struct node *mlist[256];
 static int mlist_n =0;
 
-static struct thread *prt_plist[10];
-static int prt_plist_n =0;
-static struct node *prt_mlist[256];
-static int prt_mlist_n =0;
 
 char *prt_message;
 char *exefile_name =0x0 ;
@@ -55,14 +51,14 @@ struct thread* new_thread(long given_m, long given_id){
 	return new_t;
 }
 
-struct node* is_in_mlist(long given_lock, struct node* mlist[], int mlist_n){
+struct node* is_in_mlist(long given_lock){
         for(int i=0; i<mlist_n; i++){
                 if(mlist[i]!=0x0 && given_lock == mlist[i]->mutex)
                         return mlist[i];
         }
         return 0x0;
 }
-struct thread* is_in_plist(long given_id, struct thread* plist[], int plist_n){
+struct thread* is_in_plist(long given_id){
         for(int i=0; i<plist_n; i++){
                 if(given_id==plist[i]->thread_id)
                         return plist[i];
@@ -89,71 +85,55 @@ void give_holding_m(struct thread* thr, struct edge* E){
 
 
 }
-struct node* mlist_make(long given_id, long given_m, int sig){
+struct node* mlist_make(long given_id, long given_m){
 	struct node* mut;
-	if(sig)
-		mut = is_in_mlist(given_m, mlist, mlist_n);
-	else
-		mut = is_in_mlist(given_m, prt_mlist, prt_mlist_n);
+	mut = is_in_mlist(given_m);
 	if(mut ==0x0){
 		mut = new_node(given_m);
-		if(sig) mlist[mlist_n++] = mut;
-		else prt_mlist[prt_mlist_n++] = mut;
+		mlist[mlist_n++] = mut;
 	}
 	return mut;
 }
-struct thread* plist_make(long given_id, long given_m, int sig ){
+struct thread* plist_make(long given_id, long given_m){
 	struct thread* thr_tmp1;
-	if(sig)
-		thr_tmp1 =is_in_plist(given_id, plist, plist_n);
-	else
-		thr_tmp1 =is_in_plist(given_id, prt_plist, prt_plist_n);
+	thr_tmp1 =is_in_plist(given_id);
 	if(thr_tmp1== 0x0){
 		thr_tmp1 = new_thread(given_m, given_id);
-		if(sig) plist[plist_n++] = thr_tmp1;
-		else if(sig ==0) prt_plist[prt_plist_n++] = thr_tmp1;
+		plist[plist_n++] = thr_tmp1;
 	}
 	return thr_tmp1;
 }
 void graph_make(long given_id, long given_m){
-	struct thread* thr_tmp1,  *prt_thr;
-        struct node* mut_tmp2,  *prt_mut;
-	thr_tmp1 = plist_make(given_id, given_m,1);
-	prt_thr = plist_make(given_id, given_m,0 );
-	mut_tmp2 = mlist_make(given_id, given_m, 1);
-	prt_mut = mlist_make(given_id, given_m, 0);
+	struct thread* thr_tmp1;
+        struct node* mut_tmp2;
+	thr_tmp1 = plist_make(given_id, given_m);
+	mut_tmp2 = mlist_make(given_id, given_m);
        	 
 	thr_tmp1->list[thr_tmp1->list_n] = mut_tmp2;
-	prt_thr->list[prt_thr->list_n] = prt_mut;
         struct node * last_m = last_node(thr_tmp1);
-        struct node * prt_last_m = last_node(prt_thr);
 
         if(thr_tmp1->list_n>0 && last_m!=0x0){
-                last_m->Edge->elist[0] = mut_tmp2;
-		last_m->Edge->edge_n = 1;
-                struct edge* E = prt_last_m->Edge;
-		E->elist[E->edge_n] = prt_mut;
-		printf("prt insert %ld\n", last_m->mutex);
+		
+		last_m->next = mut_tmp2;
+                struct edge* E = last_m -> Edge;
+		E->elist[E->edge_n] = mut_tmp2;
 		E->thread_id[E->edge_n] = given_id;
-		give_holding_m(prt_thr,E);	
+		give_holding_m(thr_tmp1,E);	
 		E->edge_n++;
         }
         thr_tmp1->list_n++;
-        prt_thr->list_n++;
 }
 
 void unlock_graph(long given_id, long given_m){
-	struct thread* thr = is_in_plist(given_id, plist, plist_n);
-	struct thread* prt_thr = is_in_plist(given_id, prt_plist, prt_plist_n);
-	struct node* mut = is_in_mlist(given_m, mlist, mlist_n);
+	struct thread* thr = is_in_plist(given_id);
+	struct node* mut = is_in_mlist(given_m);
 	for(int i=0; i<thr->list_n; i++){
 		if(thr->list[i]!= 0x0 && thr->list[i]->mutex == given_m){
 			if( i-1>=0 && thr->list[i-1]!=0x0 ){
 				thr->list[i-1] -> next = thr->list[i]->next;
 			}
 			thr->list[i] = 0x0;
-			mut->Edge->elist[0] = 0x0;
-			prt_thr->list[i]= 0x0;
+			mut->next = 0x0;
 		}
 	}
 
@@ -166,12 +146,9 @@ bool deadlock_detect(struct node* Node){
                 return true;
         }
         Node->visit = 1;
-	struct edge* E =Node->Edge;
-	for(int i=0; i<E->edge_n; i++){
-		if(E->elist[i]!=0x0){
-                	is_deadlock = deadlock_detect(E->elist[i]);
-       		}
-	}
+	if(Node->next!=0x0){
+               	is_deadlock = deadlock_detect(Node->next);
+       	}
         Node->visit = 0;
         return is_deadlock;
 }
@@ -183,6 +160,7 @@ bool deadlock_predict(struct node* Node,long given_id, int thread_signify){
 			printf("\n Predict : %ld\n", Node->mutex);
 			return true;
 		}
+		printf("zzzzzzzzzzzzzzzzzzzzzzzzzzz\n");
 		return false;
 	}
 	Node->visit = 1;
@@ -215,8 +193,8 @@ char * addr2line_ret(char * exename, char * addr_str){
 }
 int deadlock_prediction(char* exename, char *addr_str){
 	int ret = 0;
-	for(int i=0; i<prt_mlist_n; i++){
-		if(deadlock_predict(prt_mlist[i], 0, -1)){
+	for(int i=0; i<mlist_n; i++){
+		if(deadlock_predict(mlist[i], 0, -1)){
 			strcat(prt_message, addr2line_ret(exename, addr_str));
 			printf("*******************%s",prt_message);
 			ret = 1;
@@ -301,16 +279,16 @@ int main( int argc, char* argv[]){
 	
 		if(protocol ==1){
 			graph_make(recv_pid, recv_m);
-			check(prt_plist);
-			mucheck(prt_mlist);
+			check(plist);
+			mucheck(mlist);
 			deadlock_exception(exename, addr_str );
 			deadlock_prediction(exename, addr_str);
 			printf("\n");
 		}
 		else if (protocol ==0){
 			unlock_graph(recv_pid, recv_m);
-			check(prt_plist);
-			mucheck(prt_mlist);
+			check(plist);
+			mucheck(mlist);
 		}
 	}	
 	close(fd);
