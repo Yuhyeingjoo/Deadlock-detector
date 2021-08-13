@@ -36,6 +36,7 @@ static int prt_plist_n =0;
 static struct node *prt_mlist[256];
 static int prt_mlist_n =0;
 
+char *prt_message;
 char *exefile_name =0x0 ;
 struct node* new_node(long given_m){
         struct node* new_p;
@@ -78,14 +79,32 @@ struct node* last_node(struct thread* thr){
         }
         return ntmp;
 }
+void give_holding_m(struct thread* thr, struct edge* E){
+	for(int i=0; i<thr->list_n; i++){
+		if(thr->list[i]!=0x0)
+			E->mut[E->edge_n][i] = thr->list[i]->mutex;
+		else
+			E->mut[E->edge_n][i] = 0x0;
+	}
+
+
+}
+struct thread* plist_make(long given_id, long given_m, struct thread* plist[]){
+	struct thread* thr_tmp1;
+
+	if((thr_tmp1 =is_in_plist(given_id, plist, plist_n)) == 0x0){
+
+		thr_tmp1 = new_thread(given_m, given_id);
+                plist[plist_n++] = thr_tmp1;
+	}
+}
 void graph_make(long given_id, long given_m){
-        struct thread* thr_tmp1,  *prt_thr;
-	prt_thr = is_in_plist(given_id, prt_plist, prt_plist_n);
+	struct thread* thr_tmp1,  *prt_thr;
         struct node* mut_tmp2,  *prt_mut;
 	prt_mut = is_in_mlist(given_m, prt_mlist, prt_mlist_n);
-        
+	prt_thr = is_in_plist(given_id, prt_plist, prt_plist_n);
 	if((thr_tmp1 =is_in_plist(given_id, plist, plist_n)) == 0x0){
-                thr_tmp1 = new_thread(given_m, given_id);
+		thr_tmp1 = new_thread(given_m, given_id);
 	       	prt_thr = new_thread(given_m, given_id);
                 plist[plist_n++] = thr_tmp1;
 		prt_plist[prt_plist_n++] = prt_thr;
@@ -96,14 +115,18 @@ void graph_make(long given_id, long given_m){
                 mlist[mlist_n++] =  mut_tmp2;
 		prt_mlist[prt_mlist_n++] = prt_mut;
         }
-        
 	thr_tmp1->list[thr_tmp1->list_n] = mut_tmp2;
 	prt_thr->list[prt_thr->list_n] = prt_mut;
         struct node * last_m = last_node(thr_tmp1);
         struct node * prt_last_m = last_node(prt_thr);
         if(thr_tmp1->list_n>0 && last_m!=0x0){
-                last_m->Edge->elist[last_m->Edge->edge_n++] = mut_tmp2;
-                prt_last_m->Edge->elist[prt_last_m->Edge->edge_n++] = prt_mut;
+                last_m->Edge->elist[0] = mut_tmp2;
+		last_m->Edge->edge_n = 1;
+                struct edge* E = prt_last_m->Edge;
+		E->elist[E->edge_n] = prt_mut;
+		E->thread_id[E->edge_n] = given_id;
+		give_holding_m(prt_thr,E);	
+		E->edge_n++;
         }
         thr_tmp1->list_n++;
         prt_thr->list_n++;
@@ -113,7 +136,6 @@ void unlock_graph(long given_id, long given_m){
 	struct thread* thr = is_in_plist(given_id, plist, plist_n);
 	struct thread* prt_thr = is_in_plist(given_id, prt_plist, prt_plist_n);
 	struct node* mut = is_in_mlist(given_m, mlist, mlist_n);
-	struct node* prt_mut = is_in_mlist(given_m, prt_mlist, prt_mlist_n);
 
 	for(int i=0; i<thr->list_n; i++){
 		if(thr->list[i]!= 0x0 && thr->list[i]->mutex == given_m){
@@ -121,7 +143,7 @@ void unlock_graph(long given_id, long given_m){
 				thr->list[i-1] -> next = thr->list[i]->next;
 			}
 			thr->list[i] = 0x0;
-			mut->next = 0x0;
+			mut->Edge->elist[0] = 0x0;
 			prt_thr->list[i]= 0x0;
 		}
 	}
@@ -135,29 +157,48 @@ bool deadlock_detect(struct node* Node){
                 return true;
         }
         Node->visit = 1;
-        if(Node->next!=0x0){
-                is_deadlock = deadlock_detect(Node->next);
-        }
+	struct edge* E =Node->Edge;
+	for(int i=0; i<E->edge_n; i++){
+		if(E->elist[i]!=0x0){
+                	is_deadlock = deadlock_detect(E->elist[i]);
+       		}
+	}
+        
         Node->visit = 0;
         return is_deadlock;
 }
+char * addr2line_ret(char * exename, char * addr_str){
+	FILE *fp = 0x0;
+	char *line = (char*)malloc(sizeof(char)*64);
+	strcpy(line,"addr2line -e");
+	strcat(line,exename);
+	strcat(line," ");
+	strcat(line,addr_str);
+	if((fp = popen(line, "r")) == NULL) {
+            return 0x0;
+      	}
+	while(fgets(line, 64, fp) != NULL) {
 
+   	}
+	return line;
+}
+int deadlock_prediction(char* exename, char *addr_str){
+	int ret = 0;
+	for(int i=0; i<prt_mlist_n; i++){
+		if(deadlock_detect(prt_mlist[i])){
+			strcat(prt_message, addr2line_ret(exename, addr_str));
+			printf("*******************%s",prt_message);
+			ret = 1;
+		}
+	}
+	return ret;
+
+}
 void deadlock_exception(char* exename, char *addr_str){
         for(int i=0; i<mlist_n; i++){
                 if(deadlock_detect(mlist[i])){
-			FILE *fp = 0x0;
-			char line[64] = "addr2line -e";
-			strcat(line,exename);
-			strcat(line," ");
-			strcat(line,addr_str);
-			if((fp = popen(line, "r")) == NULL) {
-                		return ;
-        		}
-			while(fgets(line, 64, fp) != NULL) {
-                		printf("%s", line);
-       		 	}
-
                         printf("*********Detect a Deadlock**********\n");
+			printf("%s\n",addr2line_ret(exename, addr_str));			
                         exit(1);
                 }
         }
@@ -165,17 +206,25 @@ void deadlock_exception(char* exename, char *addr_str){
 
 void mucheck(struct node* mlist[]){
 	printf("\nMutex check");
+        for(int i=0; i<mlist_n; i++){
+		int e_n = mlist[i]->Edge->edge_n;
+                printf("\nMutex: %ld ",mlist[i]->mutex);
+                for(int j =0; j < e_n; j++){
+                        if(mlist[i]->Edge->elist[j]!=0x0){
+                                printf("\nNext : %ld ",mlist[i]->Edge->elist[j]->mutex);
+				for(int k=0; k<32; k++){
+					if(mlist[i]->Edge->mut[j][k]!=0x0)
+						printf("\nHold %ld",mlist[i]->Edge->mut[j][k]);
+				}
+			}
+                }
+		printf("\n");
 
-	for(int i=0; i<mlist_n; i++){
-		printf("\nMutex: %ld ",mlist[i]->mutex);
-		if(mlist[i]->next!=0x0){
-			printf("Next : %ld",mlist[i]->next->mutex);
-		}
-	}
-	printf("\n\n");
+        }
+        printf("\n\n");
+
 }
 void check(struct thread* plist[]){
-	
 	printf("\ncheck");
 	for(int i=0; i<plist_n; i++){
 		printf("\nID: %ld\nList ", plist[i]->thread_id) ;
@@ -185,44 +234,14 @@ void check(struct thread* plist[]){
 		}
 	}
 }
-void reset(){
-	exefile_name = 0x0;
-	for(int i=0; i<mlist_n; i++){
-		free(mlist[i]);
-		mlist[i] = 0x0;
 
-	}
-	mlist_n = 0;
-	for(int i=0; i<plist_n; i++){
-		free(plist[i]);
-		plist[i] = 0x0;
-	}
-	plist_n = 0;
-	check(prt_plist);
-}
-void reset_or_not(char * exename){
-	if(exefile_name ==0x0){
-		exefile_name = (char*)malloc(sizeof(char)*64);
-		strcpy(exefile_name , exename);
-
-		printf("-----------------%s start------------\n",exefile_name);
-	}	
-	else if(!strcmp(exefile_name, exename)){
-	
-		printf("--------------on going!!! %s %s------------\n",exefile_name, exename);
-	}
-	else if(strcmp(exefile_name, exename)){
-		printf("-----------------new program!!!------------\n");
-		reset();
-	}
-}
-
-void read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* addr_str  ){
+int read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* addr_str  ){
 	int read_size, addr;	
 	read_size = sizeof(int);
 	for(int i=0; i<read_size;){
 		i+=read(fd,((char*)protocol)+i,read_size-i);
 	}
+	
 	read_size = sizeof(long);
 	for(int i=0; i<read_size;){
 		i+=read(fd, ((char*)recv_pid)+i, read_size -i);
@@ -236,31 +255,33 @@ void read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* add
 		i+=read(fd, ((char*)&addr)+i,read_size-i);
 
 	sprintf(addr_str,"%X", addr);
+	return read_size;
 }
 
 int main( int argc, char* argv[]){
+	prt_message = (char*)malloc(sizeof(char)*128);
 	long recv_m, recv_pid;
 	int protocol, read_size= 0, fd, addr;
 	char *exename = (char*)malloc(sizeof(char)*32), trace_str[64], *addr_str =(char*)malloc(sizeof(char)*32) ;
-//	strcpy(exename,argv[1]);
+	strcpy(exename,argv[1]);
 	fd = open("channel", O_RDONLY | O_SYNC) ;
 	while(1){
-		read_message(fd, &protocol, &recv_pid, &recv_m, addr_str);
+		read_size = read_message(fd, &protocol, &recv_pid, &recv_m, addr_str);
 		printf("\n\nReceive\n%d %ld %ld %s\n ",protocol, recv_pid, recv_m, argv[1]);
+	
 		if(protocol ==1){
-//			printf("Exe %s  addr %s\n", argv[1], addr_str);
 			graph_make(recv_pid, recv_m);
 			check(prt_plist);
 			mucheck(prt_mlist);
 			deadlock_exception(exename, addr_str );
+			deadlock_prediction(exename, addr_str);
 			printf("\n");
 		}
-		else{
+		else if (protocol ==0){
 			unlock_graph(recv_pid, recv_m);
 			check(prt_plist);
 			mucheck(prt_mlist);
-//			printf("exefile name : %s\n",exefile_name);
-		}	
+		}
 		
 	}	
 	close(fd);
