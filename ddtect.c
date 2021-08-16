@@ -35,7 +35,6 @@ static struct node *mlist[256];
 static int mlist_n =0;
 
 int exit_sig =0;
-char *prt_message;
 char *exename =0x0 ;
 char* addr_str;
 
@@ -194,38 +193,49 @@ bool is_gate_lock(struct edge* E1,int E1_n, struct edge* E2, int E2_n){
 	} 
 	return false;
 }
-bool deadlock_predict(struct node* Node,struct edge *given_e, int thread_signify, int relative_addr, int iter){
+bool is_single_cycle(struct node* Node, long cur_id){
+	bool is_single_ret = false;
+	if(Node->visit ==2){
+		Node->visit =1;
+		return true;
+	}
+	Node->visit = 2;
+	struct edge * E = Node->Edge;
+	for(int i = 0; i<E->edge_n; i++){
+		if(E->elist[i]!=0x0 && E->thread_id[i] == cur_id){
+			is_single_ret = is_single_cycle(E->elist[i], cur_id);
+		}
+	}
+	
+	Node->visit=1;
+	return is_single_ret;
+}
+bool deadlock_predict(struct node* Node,struct edge *given_e, int relative_addr, int iter){
 //	printf("visit %ld\n", Node->mutex);
 	bool is_deadlock =false;
 	long given_id =0; 
+	struct edge* E = Node->Edge;
 	if(given_e)given_id = given_e->thread_id[iter];
 	if(Node->visit){
-		if(thread_signify>0){
+		if(!is_single_cycle(Node,given_id )){
 			printf("Predict cycle\n");
 			char *line_num = (char*)malloc(sizeof(char)*8);
 			sprintf(line_num, "%X", relative_addr);
 			printf("Thread ID: %ld \n%s",given_id,addr2line_ret(exename,line_num));
+			Node->visit=0;
 			return true;
 		}
+		Node->visit=0;
 		return false;
 	}
 	Node->checked = 1;
 	Node->visit = 1;
-	struct edge* E = Node->Edge;
 	for(int i=0; i<E->edge_n; i++){
 		if(E->elist[i]!=0x0){
-			if(E->thread_id[i] == given_id){
-				printf("if\n");
-				is_deadlock = deadlock_predict(E->elist[i],E, thread_signify, E->relative_addr[i],i);
-			}
-			else if(is_gate_lock(E, i, given_e, iter)){
-				printf("con\n");
+			if(is_gate_lock(E, i, given_e, iter))
 				continue;
-			}
-			else{
-				printf("else\n");
-				is_deadlock = deadlock_predict(E->elist[i],E, ++thread_signify,   E->relative_addr[i],i);
-			}
+			else 
+				is_deadlock = deadlock_predict(E->elist[i],E, E->relative_addr[i],i);
 		}
 	}
 	Node->visit = 0;
@@ -235,8 +245,7 @@ bool deadlock_predict(struct node* Node,struct edge *given_e, int thread_signify
 int deadlock_prediction(char* exename, char *addr_str){
 	int ret = 0;
 	for(int i=0; i<mlist_n; i++){
-
-		if(mlist[i]->checked ==0 && deadlock_predict(mlist[i], 0x0, -1, 0,0)){
+		if(mlist[i]->checked ==0 && deadlock_predict(mlist[i], 0x0, 0,0)){
 		}
 	}
 	return ret;
@@ -305,7 +314,6 @@ int read_message(int fd, int* protocol, long* recv_pid, long* recv_m, char* addr
 
 int main( int argc, char* argv[]){
 	signal(SIGINT, sighandler);
-	prt_message = (char*)malloc(sizeof(char)*128);
 	long recv_m, recv_pid;
 	int protocol, read_size= 0, fd, addr;
 	exename = (char*)malloc(sizeof(char)*32);
@@ -315,7 +323,6 @@ int main( int argc, char* argv[]){
 	while(1){
 		read_size = read_message(fd, &protocol, &recv_pid, &recv_m, addr_str, &addr);
 		printf("\n\nReceive\n%d %ld %ld %s\n ",protocol, recv_pid, recv_m, argv[1]);
-	
 		if(protocol ==1){
 			graph_make(recv_pid, recv_m, addr);
 			check(plist);

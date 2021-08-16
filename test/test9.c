@@ -6,13 +6,15 @@ pthread_mutex_t m[5];
 void *th(){
 	pthread_mutex_lock(&m[0]);
 	pthread_mutex_lock(&m[1]);
+	pthread_mutex_lock(&m[2]);
+	pthread_mutex_unlock(&m[2]);
 	pthread_mutex_unlock(&m[1]);
 	pthread_mutex_unlock(&m[0]);
 
-	pthread_mutex_lock(&m[1]);
+	pthread_mutex_lock(&m[2]);
 	pthread_mutex_lock(&m[0]);
 	pthread_mutex_unlock(&m[0]);
-	pthread_mutex_unlock(&m[1]);
+	pthread_mutex_unlock(&m[2]);
 	
 }
 int main(){

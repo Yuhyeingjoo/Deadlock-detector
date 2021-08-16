@@ -21,7 +21,7 @@ void* myfunc1(){
 }
 void* myfunc2(){
 
-	if(ex){
+	if(ex==1){
 	pthread_mutex_lock(&m[4]);
     	pthread_mutex_lock(&m[3]);
     	pthread_mutex_lock(&m[1]);
@@ -33,7 +33,7 @@ void* myfunc2(){
 	pthread_mutex_unlock(&m[4]);
 }
 
-	else if (ex==0){
+	else{
 	pthread_mutex_lock(&m[3]);
 	pthread_mutex_lock(&m[1]);
     	printf("myfunc2\n");
