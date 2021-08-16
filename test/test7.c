@@ -6,21 +6,32 @@
 pthread_mutex_t m[5];
 
 void *th(){
-	pthread_mutex_lock(&m[0]);
-	pthread_mutex_lock(&m[1]);
+ 	pthread_mutex_lock(&m[0]);
+        pthread_mutex_lock(&m[1]);
 
-	pthread_mutex_unlock(&m[1]);
-	pthread_mutex_lock(&m[2]);
-	
-	pthread_mutex_lock(&m[3]);
-	pthread_mutex_unlock(&m[3]);
+        pthread_mutex_unlock(&m[1]);
+        pthread_mutex_lock(&m[2]);
 
-	pthread_mutex_lock(&m[4]);
-	pthread_mutex_unlock(&m[4]);
-	
-	pthread_mutex_unlock(&m[2]);
-	pthread_mutex_unlock(&m[0]);
+        pthread_mutex_lock(&m[3]);
+        pthread_mutex_unlock(&m[3]);
 
+        pthread_mutex_lock(&m[4]);
+        pthread_mutex_unlock(&m[4]);
+
+        pthread_mutex_unlock(&m[2]);
+
+
+        pthread_mutex_lock(&m[5]);
+        pthread_mutex_lock(&m[6]);
+        pthread_mutex_lock(&m[7]);
+        pthread_mutex_lock(&m[8]);
+        pthread_mutex_unlock(&m[8]);
+        pthread_mutex_unlock(&m[7]);
+        pthread_mutex_lock(&m[9]);
+        pthread_mutex_unlock(&m[9]);
+        pthread_mutex_unlock(&m[6]);
+        pthread_mutex_unlock(&m[5]);
+        pthread_mutex_unlock(&m[0]);
 	
 }
 
