@@ -17,3 +17,16 @@
 
 ## detection algorithm
 
+- If a thread has a mutex lock, it makes a node.
+- If a thread has a mutex lock(lock B) holding another(lock A), it draws an edge (Node A, Node B).
+- If a thread waits a mutex lock (lock B) holding lock A, it also draws an edge (Node A, Node B).
+- When unlock, it erases edges related to the relesed mutex.
+- Everytime it receives lock information, it updates the graph and detects the cycle.
+
+## predict algorithm
+- The draw process is same as the detection algorithm drawing.
+- But for prediction, it will not erase edges even though unlock information is given.
+- Before ends the program, the deadlock predict function executes.
+- Considering that a single thread cycle and a gatelock can't be a deadlock, it find cycles.
+
+### Single thread thread & gatelock
