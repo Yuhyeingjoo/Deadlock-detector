@@ -1,4 +1,5 @@
-//Single cycle 
+//Single cycle
+//Program must not predict this cycle 
 
 #include<stdio.h>
 #include<pthread.h>
