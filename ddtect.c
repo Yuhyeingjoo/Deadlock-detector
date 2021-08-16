@@ -207,7 +207,6 @@ bool deadlock_predict(struct node* Node,struct edge *given_e, int thread_signify
 			printf("Thread ID: %ld \n%s",given_id,addr2line_ret(exename,line_num));
 			return true;
 		}
-		
 		return false;
 	}
 	Node->checked = 1;
@@ -215,12 +214,18 @@ bool deadlock_predict(struct node* Node,struct edge *given_e, int thread_signify
 	struct edge* E = Node->Edge;
 	for(int i=0; i<E->edge_n; i++){
 		if(E->elist[i]!=0x0){
-			if(E->thread_id[i] == given_id)
+			if(E->thread_id[i] == given_id){
+				printf("if\n");
 				is_deadlock = deadlock_predict(E->elist[i],E, thread_signify, E->relative_addr[i],i);
-			else if(is_gate_lock(E, i, given_e, iter))
+			}
+			else if(is_gate_lock(E, i, given_e, iter)){
+				printf("con\n");
 				continue;
-			else
+			}
+			else{
+				printf("else\n");
 				is_deadlock = deadlock_predict(E->elist[i],E, ++thread_signify,   E->relative_addr[i],i);
+			}
 		}
 	}
 	Node->visit = 0;
