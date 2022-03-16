@@ -1,5 +1,8 @@
 # Deadlock detector 
 
+
+~~~shell
+~~~
 ## ddmon.c
 - It overrides "pthread_mutex_lock" and "pthread_mutex_unlock"
 - When these two function execute, information about the lock are sended through FIFO to detector
@@ -29,4 +32,4 @@
 - Before ends the program, the deadlock predict function executes.
 - Considering that a single thread cycle and a gatelock can't be a deadlock, it find cycles.
 
-### Single thread thread & gatelock
+
