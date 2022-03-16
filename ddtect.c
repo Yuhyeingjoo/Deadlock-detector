@@ -38,10 +38,8 @@ int exit_sig =0;
 char *exename =0x0 ;
 char* addr_str;
 
-int deadlock_prediction(char* exename, char *addr_str);
 
 void sighandler(int sig){
-	deadlock_prediction(exename, addr_str);
 	exit(0);
 }
 struct node* new_node(long given_m){
@@ -179,20 +177,6 @@ bool deadlock_detect(struct node* Node){
         return is_deadlock;
 }
 
-bool is_gate_lock(struct edge* E1,int E1_n, struct edge* E2, int E2_n){
-	if(E2 ==0x0|| E1==0x0)return false;
-	long mut_con1;
-	for(int i=0; i<32; i++){
-		mut_con1 = E1->mut[E1_n][i];
-		for(int j=0; j<32; j++){
-			long mut_con2 = E2->mut[E2_n][j];
-			if(!(mut_con1==0&& mut_con2==0)&&mut_con1==mut_con2){
-				return true;
-			}
-		}
-	} 
-	return false;
-}
 bool is_single_cycle(struct node* Node, long cur_id){
 	bool is_single_ret = false;
 	if(Node->visit ==2){
@@ -210,47 +194,8 @@ bool is_single_cycle(struct node* Node, long cur_id){
 	Node->visit=1;
 	return is_single_ret;
 }
-bool deadlock_predict(struct node* Node,struct edge *given_e, int relative_addr, int iter){
-//	printf("visit %ld\n", Node->mutex);
-	bool is_deadlock =false;
-	long given_id =0; 
-	struct edge* E = Node->Edge;
-	if(given_e)given_id = given_e->thread_id[iter];
-	if(Node->visit){
-		if(!is_single_cycle(Node,given_id )){
-			printf("Predict cycle\n");
-			char *line_num = (char*)malloc(sizeof(char)*8);
-			sprintf(line_num, "%X", relative_addr);
-			printf("Thread ID: %ld \n%s",given_id,addr2line_ret(exename,line_num));
-			Node->visit=0;
-			return true;
-		}
-		Node->visit=0;
-		return false;
-	}
-	Node->checked = 1;
-	Node->visit = 1;
-	for(int i=0; i<E->edge_n; i++){
-		if(E->elist[i]!=0x0){
-			if(is_gate_lock(E, i, given_e, iter))
-				continue;
-			else 
-				is_deadlock = deadlock_predict(E->elist[i],E, E->relative_addr[i],i);
-		}
-	}
-	Node->visit = 0;
-	return is_deadlock;
-}
 
-int deadlock_prediction(char* exename, char *addr_str){
-	int ret = 0;
-	for(int i=0; i<mlist_n; i++){
-		if(mlist[i]->checked ==0 && deadlock_predict(mlist[i], 0x0, 0,0)){
-		}
-	}
-	return ret;
 
-}
 void deadlock_exception(char* exename, char *addr_str){
         for(int i=0; i<mlist_n; i++){
                 if(deadlock_detect(mlist[i])){

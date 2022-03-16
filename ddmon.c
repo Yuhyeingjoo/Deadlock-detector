@@ -99,7 +99,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex){
 	int (*mutex_p)(pthread_mutex_t *m);
 	int (*mutex_p_un) (pthread_mutex_t *m);
 	char *error;
-        
 	fd = ret_fd();
 	
 	mutex_p = dlsym(RTLD_NEXT,"pthread_mutex_lock");
