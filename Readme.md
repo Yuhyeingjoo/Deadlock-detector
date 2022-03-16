@@ -2,7 +2,18 @@
 
 
 ~~~shell
+make
 ~~~
+
+~~~shell
+LD_PRELOAD=./mymutex.so (your program for deadlock detecting)
+~~~
+
+~~~shell
+./check
+~~~
+
+
 ## ddmon.c
 - It overrides "pthread_mutex_lock" and "pthread_mutex_unlock"
 - When these two function execute, information about the lock are sended through FIFO to detector
